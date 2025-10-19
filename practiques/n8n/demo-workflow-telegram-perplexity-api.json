@@ -1,0 +1,137 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -256,
+        -80
+      ],
+      "id": "b5e52080-c3e1-4fcb-9a69-e732b3641460",
+      "name": "Telegram Trigger",
+      "webhookId": "62a2421e-caa6-474d-b93e-0b4eda457195",
+      "credentials": {
+        "telegramApi": {
+          "id": "eh7R3VBNbq5FGEeD",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "messages": {
+          "message": [
+            {
+              "content": "={{`Quina és la previsió del temps a ${$json.message.text}? Fes un resum entenedor en poques línies, de les properes hores.`}}"
+            }
+          ]
+        },
+        "options": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.perplexity",
+      "typeVersion": 1,
+      "position": [
+        48,
+        -80
+      ],
+      "id": "ef1c4bff-59e1-4c8e-8499-6332850628ea",
+      "name": "Message a model1",
+      "credentials": {
+        "perplexityApi": {
+          "id": "QcWRDn6tt3E1KX1t",
+          "name": "Perplexity account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "5690477319",
+        "text": "={{ $json.cleanedContent }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        592,
+        48
+      ],
+      "id": "1f641f00-eaa2-45fc-807b-7ad424ca73a2",
+      "name": "Send a text message1",
+      "webhookId": "ef5afd31-647c-404f-8570-8caf0868e61d",
+      "credentials": {
+        "telegramApi": {
+          "id": "eh7R3VBNbq5FGEeD",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtenir el content original del node anterior\nconst originalText = $json.choices[0].message.content; // o la propietat on estigui el text\n\n// Eliminar totes les referències numèriques entre claudàtors, ex: [8], [13]\nconst cleanText = originalText.replace(/\\[\\d+\\]/g, \"\");\n\n// Retornar el text netejat\nreturn {\n  cleanedContent: cleanText.trim()\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        336,
+        -16
+      ],
+      "id": "1d4593f9-28d7-4e5f-815d-df1d50df35d2",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Message a model1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "460cb1f4-74ab-44dc-b94e-4ca8ce82becc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c91691430536b2d78b86e8a8963ed83433e7d7c3545ecf22792287e195a36226"
+  },
+  "id": "HdjZTEXvgbBtgZhT",
+  "tags": []
+}
