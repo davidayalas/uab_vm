@@ -179,5 +179,3 @@ Si tens problemes:
 2. Comprova que tens l'última versió de VirtualBox i Vagrant
 
 ---
-
-**Fet amb ❤️ per facilitar les pràctiques de classe**
