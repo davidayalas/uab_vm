@@ -17,6 +17,8 @@ Vagrant.configure("2") do |config|
   end
 
   # Shared folder
+  # Crear la carpeta shared en local si no existeix
+  FileUtils.mkdir_p("./shared") unless Dir.exist?("./shared")
   config.vm.synced_folder "./shared", "/home/vagrant/shared", create: true
 
   # Provisionament
