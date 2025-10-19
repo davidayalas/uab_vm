@@ -119,7 +119,6 @@ La VM ja té instal·lat:
 - **Puppeteer + Chromium** - Per web scraping
 - **Firefox** - Amb bookmark preconfigurada a n8n
 - **Git, curl, wget** - Eines de desenvolupament
-- **Visual Studio Code** - Editor de codi (opcional)
 
 ## 📁 On són les meves pràctiques?
 
