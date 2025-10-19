@@ -228,6 +228,13 @@ WALLPAPER
       echo "✅ Pràctiques ja existeixen a l'escriptori"
     fi
     
+    # Crear accés directe a la carpeta shared a l'escriptori
+    if [ ! -L "/home/vagrant/Desktop/shared" ]; then
+      echo "🔗 Creant accés directe a shared..."
+      sudo -u vagrant ln -s /home/vagrant/shared /home/vagrant/Desktop/shared
+      echo "✅ Accés directe a shared creat"
+    fi
+    
     echo "✅ Instal·lació completada!"
     echo "📁 Carpeta compartida: /home/vagrant/shared"
     echo "📁 Pràctiques: ~/Desktop/practiques"

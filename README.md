@@ -178,7 +178,6 @@ Això esborrarà la VM completament i la tornarà a crear des de zero.
 Si tens problemes:
 1. Revisa aquesta documentació
 2. Comprova que tens l'última versió de VirtualBox i Vagrant
-3. Obre un issue a: https://github.com/davidayalas/uab_vm/issues
 
 ---
 
