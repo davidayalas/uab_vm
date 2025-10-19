@@ -108,7 +108,9 @@ EOF
       source "$NVM_DIR/nvm.sh"
       nvm install --lts
       nvm use --lts
-      npm install -g n8n puppeteer dotenv localtunnel node-telegram-bot-api
+      # Instal·lar paquets globals (n8n, localtunnel, node-telegram-bot-api)
+      npm install -g n8n localtunnel node-telegram-bot-api puppeteer
+      # Nota: dotenv i puppeteer s'instal·len localment a cada projecte que els necessiti      
     '
     
     # Afegir NVM al .bashrc del vagrant user
@@ -215,7 +217,7 @@ WALLPAPER
       sudo -u vagrant git clone --depth 1 https://github.com/davidayalas/uab_vm.git /tmp/uab_vm_temp
       
       # Copiar només practiques al Desktop
-      sudo -u vagrant cp -r /tmp/uab_vm_temp/shared/practiques /home/vagrant/Desktop/
+      sudo -u vagrant cp -r /tmp/uab_vm_temp/practiques /home/vagrant/Desktop/
       
       # Fer executables tots els scripts .sh
       find /home/vagrant/Desktop/practiques -type f -name "*.sh" -exec chmod +x {} \;
@@ -224,6 +226,23 @@ WALLPAPER
       rm -rf /tmp/uab_vm_temp
       
       echo "✅ Pràctiques descarregades a ~/Desktop/practiques"
+      
+      # Instal·lar dependències locals a les pràctiques que les necessitin
+      echo "📦 Instal·lant dependències de les pràctiques..."
+      
+      # Instal·lar dependències a demo-rpa (dotenv, puppeteer, node-telegram-bot-api)
+      if [ -d "/home/vagrant/Desktop/practiques/demo-rpa" ] && [ -f "/home/vagrant/Desktop/practiques/demo-rpa/package.json" ]; then
+        echo "  → Instal·lant dependències de demo-rpa..."
+        sudo -u vagrant bash -c '
+          export HOME=/home/vagrant
+          export NVM_DIR="$HOME/.nvm"
+          source "$NVM_DIR/nvm.sh"
+          cd /home/vagrant/Desktop/practiques/demo-rpa
+          npm install
+        '
+      fi
+      
+      echo "✅ Dependències instal·lades"
     else
       echo "✅ Pràctiques ja existeixen a l'escriptori"
     fi
@@ -233,6 +252,39 @@ WALLPAPER
       echo "🔗 Creant accés directe a shared..."
       sudo -u vagrant ln -s /home/vagrant/shared /home/vagrant/Desktop/shared
       echo "✅ Accés directe a shared creat"
+    fi
+    
+    # Crear accés directe a Firefox a l'escriptori
+    if [ ! -f "/home/vagrant/Desktop/firefox.desktop" ]; then
+      echo "🦊 Creant accés directe a Firefox..."
+      sudo -u vagrant tee /home/vagrant/Desktop/firefox.desktop > /dev/null <<'FIREFOX'
+[Desktop Entry]
+Version=1.0
+Name=Firefox Web Browser
+Name[ca]=Navegador web Firefox
+Name[es]=Navegador web Firefox
+Comment=Browse the World Wide Web
+Comment[ca]=Navegueu pel World Wide Web
+Comment[es]=Navegue por la web
+GenericName=Web Browser
+GenericName[ca]=Navegador web
+GenericName[es]=Navegador web
+Keywords=Internet;WWW;Browser;Web;Explorer
+Exec=firefox %u
+Terminal=false
+X-MultipleArgs=false
+Type=Application
+Icon=firefox
+Categories=GNOME;GTK;Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml+xml;application/xml;application/rss+xml;application/rdf+xml;image/gif;image/jpeg;image/png;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;x-scheme-handler/chrome;video/webm;application/x-xpinstall;
+StartupNotify=true
+Actions=NewWindow;NewPrivateWindow;
+FIREFOX
+      
+      # Fer executable l'accés directe
+      chmod +x /home/vagrant/Desktop/firefox.desktop
+      
+      echo "✅ Accés directe a Firefox creat"
     fi
     
     echo "✅ Instal·lació completada!"
