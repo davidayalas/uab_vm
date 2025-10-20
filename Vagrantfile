@@ -1,4 +1,4 @@
-# -*- mode: ruby -*-
+8# -*- mode: ruby -*-
 # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
@@ -431,7 +431,7 @@ PREFERENCES
     echo "📁 Directoris:"
     echo "   • Shared: ~/Desktop/shared"
     echo "   • Pràctiques: ~/Desktop/practiques"
-    echo "   • n8n: ~/Desktop/prvagramnt actiques/n8n"
+    echo "   • n8n: ~/Desktop/practiques/n8n"
     echo ""
     echo "🚀 Iniciar n8n:"
     echo "   cd ~/Desktop/practiques/n8n"
