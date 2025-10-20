@@ -13,9 +13,7 @@ Vagrant.configure("2") do |config|
     vb.customize ["modifyvm", :id, "--vram", "128"]
     vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
     vb.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
-    # Habilitar portapapers bidireccional
     vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
-    # Habilitar drag & drop bidireccional
     vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
   end
 
@@ -24,28 +22,14 @@ Vagrant.configure("2") do |config|
   FileUtils.mkdir_p("./shared") unless Dir.exist?("./shared")
   config.vm.synced_folder "./shared", "/home/vagrant/shared", create: true
 
-  # PROVISION 1: Sistema base i xarxa
+  # PROVISION 1: Sistema base
   config.vm.provision "shell", name: "base", inline: <<-SHELL
-    echo "🔧 [1/5] Configurant sistema base i xarxa..."
+    echo "🔧 [1/4] Configurant sistema base..."
     
-    # Optimitzar xarxa
-    mkdir -p /etc/systemd/system/systemd-networkd-wait-online.service.d/
-    tee /etc/systemd/system/systemd-networkd-wait-online.service.d/override.conf > /dev/null <<NETCONF
-[Service]
-ExecStart=
-ExecStart=/lib/systemd/systemd-networkd-wait-online --timeout=10
-NETCONF
-
-    mkdir -p /etc/systemd/resolved.conf.d/
-    tee /etc/systemd/resolved.conf.d/dns.conf > /dev/null <<DNSCONF
-[Resolve]
-DNS=8.8.8.8 8.8.4.4
-FallbackDNS=1.1.1.1 1.0.0.1
-DNSStubListener=yes
-DNSCONF
-
-    systemctl daemon-reload
-    systemctl restart systemd-resolved || true
+    # Deshabilitar snapd (no necessari i causa delays)
+    systemctl stop snapd.service || true
+    systemctl disable snapd.service || true
+    systemctl mask snapd.service || true
     
     # Configuració bàsica
     timedatectl set-timezone Europe/Madrid
@@ -54,7 +38,6 @@ DNSCONF
     
     # Actualitzar
     apt-get update -y
-    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --no-install-recommends
     
     # Utilitats essencials
     apt-get install -y curl git wget software-properties-common ca-certificates
@@ -63,39 +46,44 @@ DNSCONF
     echo "✅ Sistema base configurat"
   SHELL
 
-  # PROVISION 2: Instal·lació entorn gràfic
-  config.vm.provision "shell", name: "desktop-install", inline: <<-SHELL
-    echo "🖥️ [2/5] Instal·lant paquets d'escriptori..."
+  # PROVISION 2: Entorn gràfic mínim
+  config.vm.provision "shell", name: "desktop", inline: <<-SHELL
+    echo "🖥️ [2/4] Instal·lant escriptori mínim..."
     
-    # Actualitzar cache d'apt
+    # Actualitzar cache
     apt-get update -y
     
-    # LXQt core - el més pesat
+    # Només el mínim per GUI
     echo "  → Instal·lant LXQt core..."
-    DEBIAN_FRONTEND=noninteractive apt-get install -y lxqt-core
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends lxqt-core
     echo "  ✅ LXQt core instal·lat"
     
-    # X Server
     echo "  → Instal·lant X Server..."
-    DEBIAN_FRONTEND=noninteractive apt-get install -y xserver-xorg xserver-xorg-video-all
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends xserver-xorg xserver-xorg-video-all
     echo "  ✅ X Server instal·lat"
     
-    # LightDM
     echo "  → Instal·lant LightDM..."
-    DEBIAN_FRONTEND=noninteractive apt-get install -y lightdm lightdm-gtk-greeter
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends lightdm lightdm-gtk-greeter
     echo "  ✅ LightDM instal·lat"
     
-    # Aplicacions bàsiques
-    echo "  → Instal·lant Firefox i xterm..."
-    DEBIAN_FRONTEND=noninteractive apt-get install -y firefox xterm
-    echo "  ✅ Firefox i xterm instal·lats"
+    echo "  → Instal·lant Firefox (des de PPA)..."
+    # Afegir PPA de Mozilla per evitar snap
+    add-apt-repository -y ppa:mozillateam/ppa
     
-    echo "✅ Paquets d'escriptori instal·lats"
-  SHELL
+    # Prioritzar PPA sobre snap
+    tee /etc/apt/preferences.d/mozilla-firefox > /dev/null <<'FIREFOXPREF'
+Package: *
+Pin: release o=LP-PPA-mozillateam
+Pin-Priority: 1001
 
-  # PROVISION 3: Configuració entorn gràfic
-  config.vm.provision "shell", name: "desktop-config", inline: <<-SHELL
-    echo "⚙️ [3/5] Configurant entorn d'escriptori..."
+Package: firefox
+Pin: version 1:1snap1-0ubuntu2
+Pin-Priority: -1
+FIREFOXPREF
+    
+    apt-get update -y
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends firefox
+    echo "  ✅ Firefox instal·lat"
     
     # Configurar teclat espanyol
     tee /etc/default/keyboard > /dev/null <<KEYBOARD
@@ -121,7 +109,7 @@ EOF
     groupadd -f autologin
     usermod -aG autologin vagrant
     
-    # Mask gdm3 si existeix (pot interferir amb lightdm)
+    # Mask gdm3 si existeix
     systemctl mask gdm3 || true
     
     # Habilitar lightdm
@@ -135,12 +123,12 @@ EOF
     # Assegurar que X11 està configurat
     dpkg-reconfigure -f noninteractive xserver-xorg
     
-    echo "✅ Entorn d'escriptori configurat"
+    echo "✅ Escriptori instal·lat i configurat"
   SHELL
 
-  # PROVISION 4: Python, Node.js i dependències de desenvolupament
+  # PROVISION 3: Python, Node.js i dependències de desenvolupament (COMPLETA)
   config.vm.provision "shell", name: "devtools", inline: <<-SHELL
-    echo "📦 [4/5] Instal·lant eines de desenvolupament..."
+    echo "📦 [3/4] Instal·lant eines de desenvolupament..."
     
     # Python3
     echo "  → Instal·lant Python3..."
@@ -196,56 +184,13 @@ EOF
     echo "✅ Eines de desenvolupament instal·lades"
   SHELL
 
-  # PROVISION 5: Configuració final, Firefox, wallpaper i pràctiques
+  # PROVISION 4: Configuració final, wallpaper i pràctiques
   config.vm.provision "shell", name: "config", inline: <<-SHELL
-    echo "🎨 [5/5] Configuració final..."
+    echo "🎨 [4/4] Configuració final..."
     
     # Crear directoris
-    sudo -u vagrant mkdir -p /home/vagrant/workspace
     sudo -u vagrant mkdir -p /home/vagrant/Desktop
     sudo -u vagrant mkdir -p /home/vagrant/Pictures
-    sudo -u vagrant mkdir -p /home/vagrant/.mozilla/firefox
-    
-    # Configurar Firefox amb bookmark per n8n
-    sudo -u vagrant bash -c 'cat > /home/vagrant/.mozilla/firefox/profiles.ini <<PROFILES
-[Install4F96D1932A9F858E]
-Default=default-release
-Locked=1
-
-[Profile0]
-Name=default-release
-IsRelative=1
-Path=default-release
-Default=1
-
-[General]
-StartWithLastProfile=1
-Version=2
-PROFILES
-'
-    
-    sudo -u vagrant mkdir -p /home/vagrant/.mozilla/firefox/default-release
-    
-    sudo -u vagrant bash -c 'cat > /home/vagrant/.mozilla/firefox/default-release/bookmarks.html <<BOOKMARKS
-<!DOCTYPE NETSCAPE-Bookmark-file-1>
-<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
-<TITLE>Bookmarks</TITLE>
-<H1>Bookmarks Menu</H1>
-<DL><p>
-    <DT><H3 ADD_DATE="1634567890" LAST_MODIFIED="1634567890" PERSONAL_TOOLBAR_FOLDER="true">Barra de adreces</H3>
-    <DL><p>
-        <DT><A HREF="http://localhost:5678" ADD_DATE="1634567890" LAST_MODIFIED="1634567890">n8n - Workflow Automation</A>
-    </DL><p>
-</DL>
-BOOKMARKS
-'
-    
-    sudo -u vagrant bash -c 'cat > /home/vagrant/.mozilla/firefox/default-release/user.js <<USERJS
-user_pref("browser.bookmarks.restore_default_bookmarks", false);
-user_pref("browser.startup.homepage", "http://localhost:5678");
-user_pref("browser.toolbars.bookmarks.visibility", "always");
-USERJS
-'
     
     # Configurar wallpaper si existeix
     if [ -f /vagrant/wallpaper.png ]; then
@@ -281,7 +226,7 @@ CloseOnUnmount=true
 WALLPAPER
       echo "✅ Wallpaper configurat!"
     else
-      echo "⚠️  No s'ha trobat wallpaper.png"
+      echo "⚠️  wallpaper.png no trobat (opcional)"
     fi
     
     # Descarregar pràctiques
@@ -295,7 +240,7 @@ WALLPAPER
         find /home/vagrant/Desktop/practiques -type f -name "*.sh" -exec chmod +x {} \\;
         echo "✅ Pràctiques descarregades"
         
-        # INSTAL·LAR N8N LOCALMENT a practiques/n8n
+        # INSTAL·LAR N8N LOCALMENT
         echo "  → Creant projecte n8n local..."
         sudo -u vagrant mkdir -p /home/vagrant/Desktop/practiques/n8n
         sudo -u vagrant bash -c '
@@ -307,7 +252,7 @@ WALLPAPER
           npm install n8n localtunnel
         '
         
-        # Crear script per executar n8n
+        # Script per executar n8n
         sudo -u vagrant tee /home/vagrant/Desktop/practiques/n8n/start-n8n.sh > /dev/null <<'N8NSCRIPT'
 #!/bin/bash
 export NVM_DIR="$HOME/.nvm"
@@ -318,7 +263,7 @@ N8NSCRIPT
         chmod +x /home/vagrant/Desktop/practiques/n8n/start-n8n.sh
         echo "  ✅ n8n instal·lat localment"
         
-        # INSTAL·LAR DEPENDÈNCIES a demo-rpa (puppeteer, etc.)
+        # INSTAL·LAR DEPENDÈNCIES demo-rpa
         if [ -d "/home/vagrant/Desktop/practiques/demo-rpa" ] && [ -f "/home/vagrant/Desktop/practiques/demo-rpa/package.json" ]; then
           echo "  → Instal·lant dependències de demo-rpa..."
           sudo -u vagrant bash -c '
@@ -339,71 +284,33 @@ N8NSCRIPT
     
     # Accés directe a shared
     if [ ! -L "/home/vagrant/Desktop/shared" ]; then
-      echo "🔗 Creant accés directe a shared..."
       sudo -u vagrant ln -s /home/vagrant/shared /home/vagrant/Desktop/shared
-      echo "✅ Accés directe creat"
-    fi
-    
-    # Accés directe a Firefox
-    if [ ! -f "/home/vagrant/Desktop/firefox.desktop" ]; then
-      echo "🦊 Creant accés directe a Firefox..."
-      sudo -u vagrant tee /home/vagrant/Desktop/firefox.desktop > /dev/null <<'FIREFOX'
-[Desktop Entry]
-Version=1.0
-Name=Firefox Web Browser
-Name[ca]=Navegador web Firefox
-Name[es]=Navegador web Firefox
-Comment=Browse the World Wide Web
-Comment[ca]=Navegueu pel World Wide Web
-Comment[es]=Navegue por la web
-GenericName=Web Browser
-GenericName[ca]=Navegador web
-GenericName[es]=Navegador web
-Keywords=Internet;WWW;Browser;Web;Explorer
-Exec=firefox %u
-Terminal=false
-X-MultipleArgs=false
-Type=Application
-Icon=firefox
-Categories=GNOME;GTK;Network;WebBrowser;
-MimeType=text/html;text/xml;application/xhtml+xml;application/xml;application/rss+xml;application/rdf+xml;image/gif;image/jpeg;image/png;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;x-scheme-handler/chrome;video/webm;application/x-xpinstall;
-StartupNotify=true
-Actions=NewWindow;NewPrivateWindow;
-FIREFOX
-      chmod +x /home/vagrant/Desktop/firefox.desktop
-      echo "✅ Accés directe a Firefox creat"
+      echo "✅ Accés directe a shared creat"
     fi
     
     echo ""
-    echo "════════════════════════════════════════════════════════════"
+    echo "════════════════════════════════════════════════"
     echo "✅ INSTAL·LACIÓ COMPLETADA!"
-    echo "════════════════════════════════════════════════════════════"
+    echo "════════════════════════════════════════════════"
     echo ""
-    echo "📦 Components instal·lats:"
-    echo "   • Ubuntu 24.04 LTS amb LXQt"
+    echo "📦 Components:"
+    echo "   • Ubuntu 24.04 + LXQt (mínim)"
     echo "   • Python 3 + pip + venv"
+    echo "   • Build tools + Guest Additions"
     echo "   • Node.js (via NVM)"
-    echo "   • n8n (local a ~/Desktop/practiques/n8n)"
-    echo "   • Puppeteer + Chromium (local a demo-rpa)"
-    echo "   • Firefox amb bookmark a n8n"
+    echo "   • n8n + localtunnel (local)"
+    echo "   • Puppeteer + Chromium"
     echo ""
     echo "📁 Directoris:"
-    echo "   • Carpeta compartida: /home/vagrant/shared"
+    echo "   • Shared: ~/Desktop/shared"
     echo "   • Pràctiques: ~/Desktop/practiques"
     echo "   • n8n: ~/Desktop/practiques/n8n"
-    echo "   • demo-rpa: ~/Desktop/practiques/demo-rpa"
     echo ""
-    echo "🔧 Funcionalitats:"
-    echo "   • Teclat: Espanyol"
-    echo "   • Portapapers: Bidireccional"
-    echo "   • Drag & Drop: Bidireccional"
-    echo "   • Autologin: Activat"
-    echo ""
-    echo "🚀 Per iniciar n8n:"
+    echo "🚀 Iniciar n8n:"
     echo "   cd ~/Desktop/practiques/n8n"
     echo "   ./start-n8n.sh"
     echo ""
-    echo "⚠️  IMPORTANT: Executa 'vagrant reload' per activar l'entorn gràfic"
-    echo "════════════════════════════════════════════════════════════"
+    echo "⚠️  Executa: vagrant reload"
+    echo "════════════════════════════════════════════════"
   SHELL
 end
