@@ -28,8 +28,13 @@ Vagrant.configure("2") do |config|
   config.vm.boot_timeout = 600
 
   FileUtils.mkdir_p("./shared") unless Dir.exist?("./shared")
-  config.vm.synced_folder "./shared", "/home/vagrant/shared", create: true
-
+  # Carpeta compartida amb permisos correctes
+  config.vm.synced_folder "./shared", "/home/vagrant/shared",
+    create: true,
+    owner: "vagrant",
+    group: "vagrant",
+    mount_options: ["dmode=775,fmode=664"]
+    
   # PROVISION 1: Sistema base
   config.vm.provision "shell", name: "base", inline: <<-SHELL
     echo "🔧 [1/4] Configurant sistema base..."
