@@ -10,7 +10,7 @@ n8n és una plataforma d'automatització que et permet connectar diferents serve
 
 ### 1. Arrencar n8n
 
-Executa l'script proporcionat:
+Executa l'script:
 
 ```bash
 cd ~/Desktop/practiques/n8n
@@ -21,6 +21,8 @@ Això iniciarà n8n en mode desenvolupament. Veuràs un missatge indicant que n8
 ```
 http://localhost:5678
 ```
+
+També arrenca un tunnel amb el paquet "localtunnel" que permetrà exposar l'endpoint que necessita Telegram, o altres, per rebre notificacions.
 
 ### 2. Primer accés - Setup inicial
 
