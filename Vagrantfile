@@ -140,7 +140,7 @@ DMRC
     echo "✅ Escriptori Cinnamon instal·lat i configurat"
   SHELL
 
-  # PROVISION 3: Python, Node.js, Chromium i dependències de desenvolupament
+  # PROVISION 3: Python, Node.js, Google Chrome, VS Code i dependències
   config.vm.provision "shell", name: "devtools", inline: <<-SHELL
     echo "📦 [3/4] Instal·lant eines de desenvolupament..."
     
@@ -156,21 +156,22 @@ DMRC
 
     # VirtualBox Guest Additions per portapapers i drag&drop
     echo "  → Instal·lant VirtualBox Guest Additions..."
-    apt-get install -y virtualbox-guest-utils virtualbox-guest-x11
+    echo 'virtualbox-guest-x11 virtualbox-guest-x11/conffile-purge boolean true' | debconf-set-selections
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" virtualbox-guest-utils virtualbox-guest-x11
     usermod -aG vboxsf vagrant
     echo "  ✅ Guest Additions instal·lades"
 
-
-    # Google Chrome (millor alternativa a Chromium sense snap)
+    # Google Chrome
     echo "  → Instal·lant Google Chrome..."
-    wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
-    echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
-    apt-get install -y google-chrome-stable
-        
+    wget -q -O /tmp/google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+    dpkg -i /tmp/google-chrome.deb || true
+    apt-get install -f -y
+    rm /tmp/google-chrome.deb
+    echo "  ✅ Google Chrome instal·lat"
+    
     # Dependències per Puppeteer
-    echo "  → Instal·lant Chromium..."
-    apt-get install -y \
-      chromium \
+    echo "  → Instal·lant dependències Puppeteer..."
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
       libnss3 \
       libatk1.0-0 \
       libatk-bridge2.0-0 \
@@ -184,15 +185,22 @@ DMRC
       libasound2 \
       libpangocairo-1.0-0 \
       libgtk-3-0
-    echo "  ✅ Chromium i dependències instal·lades"
+    echo "  ✅ Dependències Puppeteer instal·lades"
     
     # Visual Studio Code
     echo "  → Instal·lant Visual Studio Code..."
-    wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/packages.microsoft.gpg
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list
-    apt-get install -y code
-    echo "  ✅ VS Code instal·lat"
-
+    wget -q -O /tmp/vscode.deb 'https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64'
+    dpkg -i /tmp/vscode.deb 2>&1 | grep -v "dependency problems" || true
+    DEBIAN_FRONTEND=noninteractive apt-get install -f -y
+    rm /tmp/vscode.deb
+    
+    # Verificar instal·lació
+    if command -v code &> /dev/null; then
+      echo "  ✅ VS Code instal·lat correctament ($(code --version | head -n1))"
+    else
+      echo "  ⚠️ VS Code no s'ha pogut instal·lar"
+    fi
+    
     # Node.js via NVM
     echo "  → Instal·lant Node.js via NVM..."
     sudo -u vagrant bash -c '
@@ -208,7 +216,7 @@ DMRC
     # Afegir NVM al .bashrc
     sudo -u vagrant bash -c 'echo "export NVM_DIR=\"\$HOME/.nvm\"" >> /home/vagrant/.bashrc'
     sudo -u vagrant bash -c 'echo "[ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\"" >> /home/vagrant/.bashrc'
-    echo "  ✅ Node.js instal·lat"
+    echo "  ✅ Node.js i localtunnel instal·lats"
     
     echo "✅ Eines de desenvolupament instal·lades"
   SHELL
@@ -262,41 +270,20 @@ VSCODE
       echo "📸 Configurant wallpaper..."
       sudo -u vagrant cp /vagrant/wallpaper.png /home/vagrant/wallpaper.png
       sudo -u vagrant cp /vagrant/wallpaper.png /home/vagrant/Pictures/
-    
-      # Crear script que configuri el wallpaper al primer login
-      sudo -u vagrant tee /home/vagrant/.set-wallpaper.sh > /dev/null <<'WALLPAPERSCRIPT'
-#!/bin/bash
-export DISPLAY=:0
-export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
-
-# Esperar que Cinnamon estigui completament carregat
-sleep 5
-
-# Configurar wallpaper
-gsettings set org.cinnamon.desktop.background picture-uri "file:///home/vagrant/wallpaper.png"
-gsettings set org.cinnamon.desktop.background picture-options "centered"
-gsettings set org.cinnamon.desktop.background primary-color "#90EE90"
-
-# Eliminar aquest script després d'executar-se
-rm -f ~/.config/autostart/set-wallpaper.desktop
-rm -f ~/.set-wallpaper.sh
-WALLPAPERSCRIPT
       
-      chmod +x /home/vagrant/.set-wallpaper.sh
-      
-      # Crear autostart per executar l'script
+      # Crear script d'autostart amb gsettings
       sudo -u vagrant mkdir -p /home/vagrant/.config/autostart
       sudo -u vagrant tee /home/vagrant/.config/autostart/set-wallpaper.desktop > /dev/null <<'AUTOSTART'
 [Desktop Entry]
 Type=Application
 Name=Set Wallpaper
-Exec=/home/vagrant/.set-wallpaper.sh
+Exec=bash -c "sleep 5 && export DISPLAY=:0 && export XDG_RUNTIME_DIR=/run/user/1000 && export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus && gsettings set org.cinnamon.desktop.background picture-uri 'file:///home/vagrant/wallpaper.png' && gsettings set org.cinnamon.desktop.background picture-options 'scaled' && gsettings set org.cinnamon.desktop.background primary-color '#90EE90' && gsettings set org.cinnamon.desktop.background color-shading-type 'solid'"
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true
 AUTOSTART
       
-      echo "✅ Wallpaper configurat (s'aplicarà al primer login)"
+      echo "✅ Wallpaper configurat (scaled amb fons verd #90EE90)"
     else
       echo "⚠️  wallpaper.png no trobat (opcional)"
     fi
