@@ -9,7 +9,15 @@ Vagrant.configure("2") do |config|
     vb.cpus = 2
     vb.gui = true
     vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
-    vb.customize ["modifyvm", :id, "--accelerate3d", "on"]
+    
+    # Detectar sistema operatiu
+    host = RbConfig::CONFIG['host_os']
+    if host =~ /darwin/  # macOS
+      vb.customize ["modifyvm", :id, "--accelerate3d", "off"]
+    else
+      vb.customize ["modifyvm", :id, "--accelerate3d", "on"]
+    end
+    
     vb.customize ["modifyvm", :id, "--vram", "128"]
     vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
     vb.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
@@ -57,17 +65,23 @@ RESOLVCONF
     echo "✅ Sistema base configurat"
   SHELL
 
-  # PROVISION 2: Entorn gràfic mínim
+  # PROVISION 2: Entorn gràfic Cinnamon
   config.vm.provision "shell", name: "desktop", inline: <<-SHELL
-    echo "🖥️ [2/4] Instal·lant escriptori mínim..."
+    echo "🖥️ [2/4] Instal·lant escriptori Cinnamon..."
     
     # Actualitzar cache
     apt-get update -y
     
-    # Només el mínim per GUI
-    echo "  → Instal·lant LXQt core..."
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends lxqt-core
-    echo "  ✅ LXQt core instal·lat"
+    echo "  → Instal·lant Cinnamon Desktop..."
+    # Cinnamon core (versió lleugera sense recomanacions)
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      cinnamon-core \
+      cinnamon-control-center \
+      cinnamon-screensaver \
+      cinnamon-settings-daemon \
+      nemo \
+      gnome-terminal
+    echo "  ✅ Cinnamon instal·lat"
     
     echo "  → Instal·lant X Server..."
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends xserver-xorg xserver-xorg-video-all
@@ -76,38 +90,6 @@ RESOLVCONF
     echo "  → Instal·lant LightDM..."
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends lightdm lightdm-gtk-greeter
     echo "  ✅ LightDM instal·lat"
-    
-    echo "  → Instal·lant aplicacions bàsiques..."
-    # Terminal, gestor de fitxers, icones i temes
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      qterminal \
-      pcmanfm-qt \
-      breeze-icon-theme \
-      breeze-cursor-theme \
-      oxygen-icon-theme \
-      adwaita-icon-theme \
-      gnome-icon-theme \
-      lxqt-qtplugin
-    echo "  ✅ Aplicacions bàsiques instal·lades"
-    
-    echo "  → Instal·lant Firefox (des de PPA)..."
-    # Afegir PPA de Mozilla per evitar snap
-    add-apt-repository -y ppa:mozillateam/ppa
-    
-    # Prioritzar PPA sobre snap
-    tee /etc/apt/preferences.d/mozilla-firefox > /dev/null <<'FIREFOXPREF'
-Package: *
-Pin: release o=LP-PPA-mozillateam
-Pin-Priority: 1001
-
-Package: firefox
-Pin: version 1:1snap1-0ubuntu2
-Pin-Priority: -1
-FIREFOXPREF
-    
-    apt-get update -y
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends firefox
-    echo "  ✅ Firefox instal·lat"
     
     # Configurar teclat espanyol
     tee /etc/default/keyboard > /dev/null <<KEYBOARD
@@ -125,7 +107,7 @@ KEYBOARD
 [Seat:*]
 autologin-user=vagrant
 autologin-user-timeout=0
-user-session=lxqt
+user-session=cinnamon
 greeter-session=lightdm-gtk-greeter
 EOF
     
@@ -136,66 +118,10 @@ EOF
     # Configurar sessió per defecte per a l'usuari vagrant
     sudo -u vagrant tee /home/vagrant/.dmrc > /dev/null <<DMRC
 [Desktop]
-Session=lxqt
+Session=cinnamon
 DMRC
     chmod 644 /home/vagrant/.dmrc
     chown vagrant:vagrant /home/vagrant/.dmrc
-    
-    # Configurar tema d'icones i terminal per defecte
-    sudo -u vagrant mkdir -p /home/vagrant/.config/lxqt
-    sudo -u vagrant tee /home/vagrant/.config/lxqt/lxqt.conf > /dev/null <<'LXQTCONF'
-[General]
-icon_theme=breeze
-theme=breeze
-
-[Qt]
-style=Breeze
-LXQTCONF
-    
-    # Configurar qterminal com a terminal per defecte
-    sudo -u vagrant mkdir -p /home/vagrant/.config/qterminal.org
-    sudo -u vagrant tee /home/vagrant/.config/qterminal.org/qterminal.ini > /dev/null <<'QTERMCONF'
-[General]
-AskOnExit=false
-BookmarksVisible=false
-HistoryLimited=true
-HistoryLimitedTo=1000
-KeyBindings=default
-MenuVisible=true
-MotionAfterPaste=0
-SavePosOnExit=true
-SaveSizeOnExit=true
-ScrollbarPosition=2
-TabBarless=false
-TabsPosition=0
-TerminalTransparency=0
-colorScheme=Linux
-emulation=default
-fontFamily=Monospace
-fontSize=11
-guiStyle=
-highlightCurrentTerminal=true
-showTerminalSizeHint=true
-term=xterm-256color
-terminalBackgroundImage=
-trimPastedTrailingNewlines=false
-
-[DropMode]
-Height=45
-KeepOpen=false
-ShortCut=F12
-ShowOnStart=false
-Width=70
-
-[MainWindow]
-ApplicationTransparency=0
-QTERMCONF
-    
-    # Assegurar que el fitxer de sessió LXQt existeix
-    if [ ! -f /usr/share/xsessions/lxqt.desktop ]; then
-      echo "⚠️  ATENCIÓ: lxqt.desktop no trobat!"
-      ls -la /usr/share/xsessions/ || true
-    fi
     
     # Mask gdm3 si existeix
     systemctl mask gdm3 || true
@@ -211,10 +137,10 @@ QTERMCONF
     # Assegurar que X11 està configurat
     dpkg-reconfigure -f noninteractive xserver-xorg
     
-    echo "✅ Escriptori instal·lat i configurat"
+    echo "✅ Escriptori Cinnamon instal·lat i configurat"
   SHELL
 
-  # PROVISION 3: Python, Node.js i dependències de desenvolupament (COMPLETA)
+  # PROVISION 3: Python, Node.js, Chromium i dependències de desenvolupament
   config.vm.provision "shell", name: "devtools", inline: <<-SHELL
     echo "📦 [3/4] Instal·lant eines de desenvolupament..."
     
@@ -234,10 +160,17 @@ QTERMCONF
     usermod -aG vboxsf vagrant
     echo "  ✅ Guest Additions instal·lades"
 
-    # Dependències per Puppeteer/Chromium
-    echo "  → Instal·lant dependències Chromium..."
+
+    # Google Chrome (millor alternativa a Chromium sense snap)
+    echo "  → Instal·lant Google Chrome..."
+    wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
+    echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
+    apt-get install -y google-chrome-stable
+        
+    # Dependències per Puppeteer
+    echo "  → Instal·lant Chromium..."
     apt-get install -y \
-      chromium-browser \
+      chromium \
       libnss3 \
       libatk1.0-0 \
       libatk-bridge2.0-0 \
@@ -251,8 +184,15 @@ QTERMCONF
       libasound2 \
       libpangocairo-1.0-0 \
       libgtk-3-0
-    echo "  ✅ Dependències Chromium instal·lades"
+    echo "  ✅ Chromium i dependències instal·lades"
     
+    # Visual Studio Code
+    echo "  → Instal·lant Visual Studio Code..."
+    wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/packages.microsoft.gpg
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list
+    apt-get install -y code
+    echo "  ✅ VS Code instal·lat"
+
     # Node.js via NVM
     echo "  → Instal·lant Node.js via NVM..."
     sudo -u vagrant bash -c '
@@ -262,6 +202,7 @@ QTERMCONF
       source "$NVM_DIR/nvm.sh"
       nvm install --lts
       nvm use --lts
+      npm install -g localtunnel n8n
     '
     
     # Afegir NVM al .bashrc
@@ -280,42 +221,156 @@ QTERMCONF
     sudo -u vagrant mkdir -p /home/vagrant/Desktop
     sudo -u vagrant mkdir -p /home/vagrant/Pictures
     
+    # Crear accés directe a Google Chrome al Desktop
+    echo "🌐 Creant accés directe a Google Chrome..."
+    sudo -u vagrant tee /home/vagrant/Desktop/google-chrome.desktop > /dev/null <<'CHROME'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Google Chrome
+Comment=Access the Internet
+Exec=/usr/bin/google-chrome-stable %U
+Icon=google-chrome
+Terminal=false
+Categories=Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml+xml;
+CHROME
+    chmod +x /home/vagrant/Desktop/google-chrome.desktop
+    chown vagrant:vagrant /home/vagrant/Desktop/google-chrome.desktop
+    echo "✅ Accés directe a Google Chrome creat"
+    
+    # Crear accés directe a VS Code al Desktop
+    echo "💻 Creant accés directe a VS Code..."
+    sudo -u vagrant tee /home/vagrant/Desktop/code.desktop > /dev/null <<'VSCODE'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Visual Studio Code
+Comment=Code Editing. Redefined.
+Exec=/usr/bin/code %F
+Icon=com.visualstudio.code
+Terminal=false
+Categories=Development;IDE;
+MimeType=text/plain;
+VSCODE
+    chmod +x /home/vagrant/Desktop/code.desktop
+    chown vagrant:vagrant /home/vagrant/Desktop/code.desktop
+    echo "✅ Accés directe a VS Code creat"
+    
     # Configurar wallpaper si existeix
     if [ -f /vagrant/wallpaper.png ]; then
       echo "📸 Configurant wallpaper..."
       sudo -u vagrant cp /vagrant/wallpaper.png /home/vagrant/wallpaper.png
       sudo -u vagrant cp /vagrant/wallpaper.png /home/vagrant/Pictures/
+    
+      # Crear script que configuri el wallpaper al primer login
+      sudo -u vagrant tee /home/vagrant/.set-wallpaper.sh > /dev/null <<'WALLPAPERSCRIPT'
+#!/bin/bash
+export DISPLAY=:0
+export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+
+# Esperar que Cinnamon estigui completament carregat
+sleep 5
+
+# Configurar wallpaper
+gsettings set org.cinnamon.desktop.background picture-uri "file:///home/vagrant/wallpaper.png"
+gsettings set org.cinnamon.desktop.background picture-options "centered"
+gsettings set org.cinnamon.desktop.background primary-color "#90EE90"
+
+# Eliminar aquest script després d'executar-se
+rm -f ~/.config/autostart/set-wallpaper.desktop
+rm -f ~/.set-wallpaper.sh
+WALLPAPERSCRIPT
       
-      sudo -u vagrant mkdir -p /home/vagrant/.config/pcmanfm-qt/lxqt
-      sudo -u vagrant mkdir -p /home/vagrant/.config/lxqt
+      chmod +x /home/vagrant/.set-wallpaper.sh
       
-      sudo -u vagrant tee /home/vagrant/.config/pcmanfm-qt/lxqt/settings.conf > /dev/null <<'WALLPAPER'
-[Desktop]
-Wallpaper=/home/vagrant/wallpaper.png
-WallpaperMode=fit
-BgColor=#90EE90
-FallbackIcon=folder
-
-[System]
-OnlyUserTemplates=false
-TemplateTypeOnce=false
-TemplateRunApp=false
-SuCommand=lxqt-sudo %s
-
-[Thumbnail]
-ShowThumbnails=true
-MaxThumbnailFileSize=4096
-
-[Volume]
-AutoRun=true
-MountOnStartup=true
-MountRemovable=true
-CloseOnUnmount=true
-WALLPAPER
-      echo "✅ Wallpaper configurat!"
+      # Crear autostart per executar l'script
+      sudo -u vagrant mkdir -p /home/vagrant/.config/autostart
+      sudo -u vagrant tee /home/vagrant/.config/autostart/set-wallpaper.desktop > /dev/null <<'AUTOSTART'
+[Desktop Entry]
+Type=Application
+Name=Set Wallpaper
+Exec=/home/vagrant/.set-wallpaper.sh
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+AUTOSTART
+      
+      echo "✅ Wallpaper configurat (s'aplicarà al primer login)"
     else
       echo "⚠️  wallpaper.png no trobat (opcional)"
     fi
+    
+    # Configurar marcadors de Google Chrome
+    echo "🔖 Configurant marcadors de Google Chrome..."
+    sudo -u vagrant mkdir -p /home/vagrant/.config/google-chrome/Default
+    
+    sudo -u vagrant tee /home/vagrant/.config/google-chrome/Default/Bookmarks > /dev/null <<'BOOKMARKS'
+{
+   "checksum": "0d3a7c4e6c8e8c8e8c8e8c8e8c8e8c8e",
+   "roots": {
+      "bookmark_bar": {
+         "children": [ {
+            "date_added": "13300000000000000",
+            "date_last_used": "0",
+            "guid": "00000000-0000-4000-a000-000000000001",
+            "id": "5",
+            "name": "n8n (localhost:5678)",
+            "type": "url",
+            "url": "http://localhost:5678"
+         } ],
+         "date_added": "13300000000000000",
+         "date_last_used": "0",
+         "date_modified": "13300000000000000",
+         "guid": "00000000-0000-4000-a000-000000000002",
+         "id": "1",
+         "name": "Barra de marcadors",
+         "type": "folder"
+      },
+      "other": {
+         "children": [  ],
+         "date_added": "13300000000000000",
+         "date_last_used": "0",
+         "date_modified": "0",
+         "guid": "00000000-0000-4000-a000-000000000003",
+         "id": "2",
+         "name": "Altres marcadors",
+         "type": "folder"
+      },
+      "synced": {
+         "children": [  ],
+         "date_added": "13300000000000000",
+         "date_last_used": "0",
+         "date_modified": "0",
+         "guid": "00000000-0000-4000-a000-000000000004",
+         "id": "3",
+         "name": "Marcadors del mòbil",
+         "type": "folder"
+      }
+   },
+   "version": 1
+}
+BOOKMARKS
+    
+    # Configurar Chrome per mostrar la barra de marcadors
+    sudo -u vagrant tee /home/vagrant/.config/google-chrome/Default/Preferences > /dev/null <<'PREFERENCES'
+{
+   "bookmark_bar": {
+      "show_on_all_tabs": true
+   },
+   "browser": {
+      "show_home_button": true
+   },
+   "homepage": "http://localhost:5678",
+   "homepage_is_newtabpage": false,
+   "session": {
+      "restore_on_startup": 1,
+      "startup_urls": [ "http://localhost:5678" ]
+   }
+}
+PREFERENCES
+    
+    echo "✅ Marcadors de Google Chrome configurats!"
     
     # Descarregar pràctiques
     if [ ! -d "/home/vagrant/Desktop/practiques" ]; then
@@ -337,18 +392,8 @@ WALLPAPER
           source "$NVM_DIR/nvm.sh"
           cd /home/vagrant/Desktop/practiques/n8n
           npm init -y
-          npm install n8n localtunnel
+          npm install
         '
-        
-        # Script per executar n8n
-        sudo -u vagrant tee /home/vagrant/Desktop/practiques/n8n/start-n8n.sh > /dev/null <<'N8NSCRIPT'
-#!/bin/bash
-export NVM_DIR="$HOME/.nvm"
-source "$NVM_DIR/nvm.sh"
-cd ~/Desktop/practiques/n8n
-npx n8n
-N8NSCRIPT
-        chmod +x /home/vagrant/Desktop/practiques/n8n/start-n8n.sh
         echo "  ✅ n8n instal·lat localment"
         
         # INSTAL·LAR DEPENDÈNCIES demo-rpa
@@ -382,23 +427,25 @@ N8NSCRIPT
     echo "════════════════════════════════════════════════"
     echo ""
     echo "📦 Components:"
-    echo "   • Ubuntu 24.04 + LXQt (mínim)"
+    echo "   • Ubuntu 24.04 + Cinnamon Desktop"
     echo "   • Python 3 + pip + venv"
     echo "   • Build tools + Guest Additions"
     echo "   • Node.js (via NVM)"
     echo "   • n8n + localtunnel (local)"
     echo "   • Puppeteer + Chromium"
     echo "   • Wallpaper configurat"
-    echo "   • Firefox (des de PPA, no snap)"
+    echo "   • Marcador n8n a Chromium"
     echo ""
     echo "📁 Directoris:"
     echo "   • Shared: ~/Desktop/shared"
     echo "   • Pràctiques: ~/Desktop/practiques"
-    echo "   • n8n: ~/Desktop/practiques/n8n"
+    echo "   • n8n: ~/Desktop/prvagramnt actiques/n8n"
     echo ""
     echo "🚀 Iniciar n8n:"
     echo "   cd ~/Desktop/practiques/n8n"
-    echo "   ./start-n8n.sh"
+    echo "   ./n8n-start.sh"
+    echo ""
+    echo "🌐 Chromium obrirà automàticament http://localhost:5678"
     echo ""
     echo "⚠️  Executa: vagrant reload"
     echo "════════════════════════════════════════════════"
