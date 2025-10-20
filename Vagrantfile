@@ -112,7 +112,6 @@ EOF
       nvm use --lts
       # Instal·lar paquets globals (n8n, localtunnel, node-telegram-bot-api)
       npm install -g n8n localtunnel node-telegram-bot-api puppeteer
-      # Nota: dotenv i puppeteer s'instal·len localment a cada projecte que els necessiti      
     '
     
     # Afegir NVM al .bashrc del vagrant user
@@ -174,6 +173,8 @@ USERJS
       echo "📸 Configurant wallpaper..."
       # Copiar wallpaper al directori de l'usuari
       sudo -u vagrant cp /vagrant/wallpaper.png /home/vagrant/wallpaper.png
+      sudo -u vagrant mkdir -p /home/vagrant/Pictures
+      sudo -u vagrant cp /vagrant/wallpaper.png /home/vagrant/Pictures/
       
       # Crear directoris de configuració necessaris
       sudo -u vagrant mkdir -p /home/vagrant/.config/pcmanfm-qt/lxqt
@@ -232,7 +233,7 @@ WALLPAPER
       # Instal·lar dependències locals a les pràctiques que les necessitin
       echo "📦 Instal·lant dependències de les pràctiques..."
       
-      # Instal·lar dependències a demo-rpa (dotenv, puppeteer, node-telegram-bot-api)
+      # Instal·lar dependències a demo-rpa
       if [ -d "/home/vagrant/Desktop/practiques/demo-rpa" ] && [ -f "/home/vagrant/Desktop/practiques/demo-rpa/package.json" ]; then
         echo "  → Instal·lant dependències de demo-rpa..."
         sudo -u vagrant bash -c '
@@ -242,6 +243,7 @@ WALLPAPER
           cd /home/vagrant/Desktop/practiques/demo-rpa
           npm install
         '
+        echo "  ✅ Dependències de demo-rpa instal·lades"
       fi
       
       echo "✅ Dependències instal·lades"
@@ -292,9 +294,6 @@ FIREFOX
     echo "✅ Instal·lació completada!"
     echo "📁 Carpeta compartida: /home/vagrant/shared"
     echo "📁 Pràctiques: ~/Desktop/practiques"
-    #echo "📋 Per habilitar pantalla completa:"
-    #echo "   1. A la finestra de VirtualBox: Dispositius > Inserir imatge de CD de Guest Additions"
-    #echo "   2. Dins la VM executa: sudo /media/vagrant/VBox*/VBoxLinuxAdditions.run"
     echo "   Reinicia la VM amb: vagrant reload"
   SHELL
 end
