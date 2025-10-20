@@ -31,6 +31,17 @@ Vagrant.configure("2") do |config|
     systemctl disable snapd.service || true
     systemctl mask snapd.service || true
     
+    # Deshabilitar systemd-resolved temporalment per evitar bucles
+    systemctl stop systemd-resolved || true
+    
+    # Configurar DNS directament a /etc/resolv.conf
+    rm -f /etc/resolv.conf
+    tee /etc/resolv.conf > /dev/null <<RESOLVCONF
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+RESOLVCONF
+    chattr +i /etc/resolv.conf
+    
     # Configuració bàsica
     timedatectl set-timezone Europe/Madrid
     locale-gen ca_ES.UTF-8
@@ -65,6 +76,19 @@ Vagrant.configure("2") do |config|
     echo "  → Instal·lant LightDM..."
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends lightdm lightdm-gtk-greeter
     echo "  ✅ LightDM instal·lat"
+    
+    echo "  → Instal·lant aplicacions bàsiques..."
+    # Terminal, gestor de fitxers, icones i temes
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      qterminal \
+      pcmanfm-qt \
+      breeze-icon-theme \
+      breeze-cursor-theme \
+      oxygen-icon-theme \
+      adwaita-icon-theme \
+      gnome-icon-theme \
+      lxqt-qtplugin
+    echo "  ✅ Aplicacions bàsiques instal·lades"
     
     echo "  → Instal·lant Firefox (des de PPA)..."
     # Afegir PPA de Mozilla per evitar snap
@@ -108,6 +132,70 @@ EOF
     # Afegir vagrant al grup autologin
     groupadd -f autologin
     usermod -aG autologin vagrant
+    
+    # Configurar sessió per defecte per a l'usuari vagrant
+    sudo -u vagrant tee /home/vagrant/.dmrc > /dev/null <<DMRC
+[Desktop]
+Session=lxqt
+DMRC
+    chmod 644 /home/vagrant/.dmrc
+    chown vagrant:vagrant /home/vagrant/.dmrc
+    
+    # Configurar tema d'icones i terminal per defecte
+    sudo -u vagrant mkdir -p /home/vagrant/.config/lxqt
+    sudo -u vagrant tee /home/vagrant/.config/lxqt/lxqt.conf > /dev/null <<'LXQTCONF'
+[General]
+icon_theme=breeze
+theme=breeze
+
+[Qt]
+style=Breeze
+LXQTCONF
+    
+    # Configurar qterminal com a terminal per defecte
+    sudo -u vagrant mkdir -p /home/vagrant/.config/qterminal.org
+    sudo -u vagrant tee /home/vagrant/.config/qterminal.org/qterminal.ini > /dev/null <<'QTERMCONF'
+[General]
+AskOnExit=false
+BookmarksVisible=false
+HistoryLimited=true
+HistoryLimitedTo=1000
+KeyBindings=default
+MenuVisible=true
+MotionAfterPaste=0
+SavePosOnExit=true
+SaveSizeOnExit=true
+ScrollbarPosition=2
+TabBarless=false
+TabsPosition=0
+TerminalTransparency=0
+colorScheme=Linux
+emulation=default
+fontFamily=Monospace
+fontSize=11
+guiStyle=
+highlightCurrentTerminal=true
+showTerminalSizeHint=true
+term=xterm-256color
+terminalBackgroundImage=
+trimPastedTrailingNewlines=false
+
+[DropMode]
+Height=45
+KeepOpen=false
+ShortCut=F12
+ShowOnStart=false
+Width=70
+
+[MainWindow]
+ApplicationTransparency=0
+QTERMCONF
+    
+    # Assegurar que el fitxer de sessió LXQt existeix
+    if [ ! -f /usr/share/xsessions/lxqt.desktop ]; then
+      echo "⚠️  ATENCIÓ: lxqt.desktop no trobat!"
+      ls -la /usr/share/xsessions/ || true
+    fi
     
     # Mask gdm3 si existeix
     systemctl mask gdm3 || true
@@ -300,6 +388,8 @@ N8NSCRIPT
     echo "   • Node.js (via NVM)"
     echo "   • n8n + localtunnel (local)"
     echo "   • Puppeteer + Chromium"
+    echo "   • Wallpaper configurat"
+    echo "   • Firefox (des de PPA, no snap)"
     echo ""
     echo "📁 Directoris:"
     echo "   • Shared: ~/Desktop/shared"
