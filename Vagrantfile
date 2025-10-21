@@ -27,6 +27,7 @@ Vagrant.configure("2") do |config|
 
   config.vm.boot_timeout = 600
 
+  # Assegurar que el directori shared existeix
   FileUtils.mkdir_p("./shared") unless Dir.exist?("./shared")
   # Carpeta compartida amb permisos correctes
   config.vm.synced_folder "./shared", "/home/vagrant/shared",
@@ -39,21 +40,46 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", name: "base", inline: <<-SHELL
     echo "🔧 [1/4] Configurant sistema base..."
     
+    # Reduir timeout de systemd per serveis de xarxa (evita bloquejos en Linux)
+    mkdir -p /etc/systemd/system.conf.d
+    tee /etc/systemd/system.conf.d/timeout.conf > /dev/null <<TIMEOUT
+[Manager]
+DefaultTimeoutStartSec=30s
+DefaultTimeoutStopSec=15s
+TIMEOUT
+    
+    systemctl daemon-reload
+    
     # Deshabilitar snapd (no necessari i causa delays)
     systemctl stop snapd.service || true
     systemctl disable snapd.service || true
     systemctl mask snapd.service || true
     
-    # Deshabilitar systemd-resolved temporalment per evitar bucles
-    systemctl stop systemd-resolved || true
+    # Configurar DNS sense deshabilitar systemd-resolved completament
+    # Només configurem un fallback DNS
+    mkdir -p /etc/systemd/resolved.conf.d
+    tee /etc/systemd/resolved.conf.d/dns.conf > /dev/null <<DNSCONF
+[Resolve]
+DNS=8.8.8.8 8.8.4.4
+FallbackDNS=1.1.1.1 1.0.0.1
+DNSCONF
     
-    # Configurar DNS directament a /etc/resolv.conf
-    rm -f /etc/resolv.conf
-    tee /etc/resolv.conf > /dev/null <<RESOLVCONF
-nameserver 8.8.8.8
-nameserver 8.8.4.4
-RESOLVCONF
-    chattr +i /etc/resolv.conf
+    # Reiniciar systemd-resolved per aplicar canvis
+    systemctl restart systemd-resolved || true
+    
+    # Configurar systemd-networkd per no gestionar interfícies de VirtualBox
+    # Això evita que es quedi penjat esperant interfícies
+    mkdir -p /etc/systemd/network
+    tee /etc/systemd/network/99-vagrant.network > /dev/null <<NETCONF
+[Match]
+Name=enp0s3
+
+[Network]
+DHCP=yes
+NETCONF
+    
+    # Assegurar que systemd-networkd no bloqueja l'arrencada
+    systemctl enable systemd-networkd || true
     
     # Configuració bàsica
     timedatectl set-timezone Europe/Madrid
