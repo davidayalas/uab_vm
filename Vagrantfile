@@ -303,10 +303,10 @@ VSCODE
     echo "✅ Accés directe a VS Code creat"
     
     # Configurar wallpaper si existeix
-    if [ -f /vagrant/wallpaper.png ]; then
+    if [ -f /vagrant/img/wallpaper.png ]; then
       echo "📸 Configurant wallpaper..."
-      sudo -u vagrant cp /vagrant/wallpaper.png /home/vagrant/wallpaper.png
-      sudo -u vagrant cp /vagrant/wallpaper.png /home/vagrant/Pictures/
+      sudo -u vagrant cp /vagrant/img/wallpaper.png /home/vagrant/wallpaper.png
+      sudo -u vagrant cp /vagrant/img/wallpaper.png /home/vagrant/Pictures/
       
       # Crear script d'autostart amb gsettings
       sudo -u vagrant mkdir -p /home/vagrant/.config/autostart

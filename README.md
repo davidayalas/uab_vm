@@ -12,6 +12,11 @@ El fitxer `Vagrantfile` configura automàticament:
 - ✅ Les pràctiques de classe a l’escriptori
 - ✅ Una carpeta compartida entre el teu ordinador i la VM (`~/shared`) i enllaç a l’Escriptori
 
+
+## 🖼️ Captura de pantalla
+
+![Captura de pantalla de la VM](img/sample-screen.png)
+
 **No cal configurar res manualment!** Només has d'executar una comanda i esperar.
 
 ## 📋 Requisits previs
