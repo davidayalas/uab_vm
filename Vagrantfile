@@ -286,14 +286,20 @@ Version=1.0
 Type=Application
 Name=Visual Studio Code
 Comment=Code Editing. Redefined.
-Exec=/usr/bin/code %F
-Icon=com.visualstudio.code
+Exec=/usr/bin/code --no-sandbox --unity-launch %F
+Icon=vscode
 Terminal=false
-Categories=Development;IDE;
-MimeType=text/plain;
+Categories=Development;IDE;TextEditor;
+MimeType=text/plain;inode/directory;
+StartupWMClass=Code
+Actions=new-empty-window;
 VSCODE
     chmod +x /home/vagrant/Desktop/code.desktop
     chown vagrant:vagrant /home/vagrant/Desktop/code.desktop
+    
+    # Marcar com a confiable (trusted) per Cinnamon/GNOME
+    sudo -u vagrant gio set /home/vagrant/Desktop/code.desktop "metadata::trusted" "yes" 2>/dev/null || true
+    
     echo "✅ Accés directe a VS Code creat"
     
     # Configurar wallpaper si existeix
