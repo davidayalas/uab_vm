@@ -6,7 +6,7 @@ Aquest projecte proporciona una màquina virtual Ubuntu 24.04 LTS preconfigurada
 
 El fitxer `Vagrantfile` configura automàticament:
 - ✅ Una màquina virtual Ubuntu amb escriptori gràfic Cinnamon
-- ✅ Autologin automàtic (no cal posar contrasenya). El password d'administrador és "vagrant" si necessites instal·lar nous programari. 
+- ✅ Autologin automàtic (no cal posar contrasenya). 
 - ✅ Eines de desenvolupament: Python, Node.js (via NVM), n8n, Puppeteer (deps), Git, etc.
 - ✅ Google Chrome i Visual Studio Code amb accessos directes a l’escriptori
 - ✅ Les pràctiques de classe a l’escriptori
@@ -70,7 +70,7 @@ per assegurar que totes les configuracions gràfiques s’apliquen correctament.
 ### Pas 3: Ja està! 🎉
 
 La VM està llesta per utilitzar:
-- **Usuari**: vagrant (autologin automàtic, no cal contrasenya)
+- **Usuari**: "vagrant" (autologin automàtic, no cal contrasenya). Password "vagrant", si ho necessitessis.
 - **Escriptori**: Cinnamon
 - **Pràctiques**: Les trobaràs a l'escriptori en la carpeta `practiques`
 - **Carpeta compartida**: `~/shared` (també tens un enllaç a l’Escriptori)
