@@ -44,6 +44,20 @@ n8n start &
 N8N_PID=$!
 
 echo "n8n PID: $N8N_PID, localtunnel PID: $LT_PID"
+echo "Esperant que n8n estigui llest..."
+
+# Esperar que n8n estigui llest (comprova si el port 5678 respon)
+for i in {1..30}; do
+  if curl -s http://localhost:5678 > /dev/null 2>&1; then
+    echo "✅ n8n està llest!"
+    break
+  fi
+  sleep 1
+done
+
+# Obrir Google Chrome amb la URL de n8n
+echo "🌐 Obrint Google Chrome amb http://localhost:5678..."
+google-chrome --new-window http://localhost:5678 > /dev/null 2>&1 &
 
 wait $N8N_PID $LT_PID
 

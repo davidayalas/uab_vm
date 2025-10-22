@@ -194,9 +194,11 @@ DMRC
 
     # Google Chrome
     echo "  → Instal·lant Google Chrome..."
+    # Instal·lar dependències necessàries primer
+    DEBIAN_FRONTEND=noninteractive apt-get install -y fonts-liberation libappindicator3-1 xdg-utils
     wget -q -O /tmp/google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
     dpkg -i /tmp/google-chrome.deb || true
-    apt-get install -f -y
+    DEBIAN_FRONTEND=noninteractive apt-get install -f -y
     rm /tmp/google-chrome.deb
     echo "  ✅ Google Chrome instal·lat"
     
@@ -469,9 +471,13 @@ PREFERENCES
     echo "   cd ~/Desktop/practiques/n8n"
     echo "   ./n8n-start.sh"
     echo ""
-    echo "🌐 Chromium obrirà automàticament http://localhost:5678"
+    echo "🌐 Chrome obrirà automàticament http://localhost:5678"
     echo ""
-    echo "⚠️  Executa: vagrant reload"
     echo "════════════════════════════════════════════════"
+    echo "🔄 Reiniciant la VM per aplicar tots els canvis..."
+    echo "════════════════════════════════════════════════"
+    
+    # Reboot per assegurar que tot s'aplica correctament
+    shutdown -r +1 "Sistema reiniciant per completar la instal·lació..." &
   SHELL
 end
