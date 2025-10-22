@@ -27,7 +27,6 @@ Vagrant.configure("2") do |config|
 
   config.vm.boot_timeout = 600
 
-  # Assegurar que el directori shared existeix
   FileUtils.mkdir_p("./shared") unless Dir.exist?("./shared")
   # Carpeta compartida amb permisos correctes
   config.vm.synced_folder "./shared", "/home/vagrant/shared",
@@ -40,46 +39,21 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", name: "base", inline: <<-SHELL
     echo "🔧 [1/4] Configurant sistema base..."
     
-    # Reduir timeout de systemd per serveis de xarxa (evita bloquejos en Linux)
-    mkdir -p /etc/systemd/system.conf.d
-    tee /etc/systemd/system.conf.d/timeout.conf > /dev/null <<TIMEOUT
-[Manager]
-DefaultTimeoutStartSec=30s
-DefaultTimeoutStopSec=15s
-TIMEOUT
-    
-    systemctl daemon-reload
-    
     # Deshabilitar snapd (no necessari i causa delays)
     systemctl stop snapd.service || true
     systemctl disable snapd.service || true
     systemctl mask snapd.service || true
     
-    # Configurar DNS sense deshabilitar systemd-resolved completament
-    # Només configurem un fallback DNS
-    mkdir -p /etc/systemd/resolved.conf.d
-    tee /etc/systemd/resolved.conf.d/dns.conf > /dev/null <<DNSCONF
-[Resolve]
-DNS=8.8.8.8 8.8.4.4
-FallbackDNS=1.1.1.1 1.0.0.1
-DNSCONF
+    # Deshabilitar systemd-resolved temporalment per evitar bucles
+    systemctl stop systemd-resolved || true
     
-    # Reiniciar systemd-resolved per aplicar canvis
-    systemctl restart systemd-resolved || true
-    
-    # Configurar systemd-networkd per no gestionar interfícies de VirtualBox
-    # Això evita que es quedi penjat esperant interfícies
-    mkdir -p /etc/systemd/network
-    tee /etc/systemd/network/99-vagrant.network > /dev/null <<NETCONF
-[Match]
-Name=enp0s3
-
-[Network]
-DHCP=yes
-NETCONF
-    
-    # Assegurar que systemd-networkd no bloqueja l'arrencada
-    systemctl enable systemd-networkd || true
+    # Configurar DNS directament a /etc/resolv.conf
+    rm -f /etc/resolv.conf
+    tee /etc/resolv.conf > /dev/null <<RESOLVCONF
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+RESOLVCONF
+    chattr +i /etc/resolv.conf
     
     # Configuració bàsica
     timedatectl set-timezone Europe/Madrid
@@ -194,11 +168,9 @@ DMRC
 
     # Google Chrome
     echo "  → Instal·lant Google Chrome..."
-    # Instal·lar dependències necessàries primer
-    DEBIAN_FRONTEND=noninteractive apt-get install -y fonts-liberation libappindicator3-1 xdg-utils
     wget -q -O /tmp/google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
     dpkg -i /tmp/google-chrome.deb || true
-    DEBIAN_FRONTEND=noninteractive apt-get install -f -y
+    apt-get install -f -y
     rm /tmp/google-chrome.deb
     echo "  ✅ Google Chrome instal·lat"
     
@@ -298,10 +270,6 @@ Actions=new-empty-window;
 VSCODE
     chmod +x /home/vagrant/Desktop/code.desktop
     chown vagrant:vagrant /home/vagrant/Desktop/code.desktop
-    
-    # Marcar com a confiable (trusted) per Cinnamon/GNOME
-    sudo -u vagrant gio set /home/vagrant/Desktop/code.desktop "metadata::trusted" "yes" 2>/dev/null || true
-    
     echo "✅ Accés directe a VS Code creat"
     
     # Configurar wallpaper si existeix
@@ -458,9 +426,9 @@ PREFERENCES
     echo "   • Build tools + Guest Additions"
     echo "   • Node.js (via NVM)"
     echo "   • n8n + localtunnel (local)"
-    echo "   • Puppeteer + Chromium"
+    echo "   • Puppeteer + Chrome"
     echo "   • Wallpaper configurat"
-    echo "   • Marcador n8n a Chromium"
+    echo "   • Marcador n8n a Chrome"
     echo ""
     echo "📁 Directoris:"
     echo "   • Shared: ~/Desktop/shared"
@@ -473,11 +441,11 @@ PREFERENCES
     echo ""
     echo "🌐 Chrome obrirà automàticament http://localhost:5678"
     echo ""
+    echo "⚠️  Executa: vagrant reload"
     echo "════════════════════════════════════════════════"
-    echo "🔄 Reiniciant la VM per aplicar tots els canvis..."
-    echo "════════════════════════════════════════════════"
-    
+
     # Reboot per assegurar que tot s'aplica correctament
     shutdown -r +1 "Sistema reiniciant per completar la instal·lació..." &
+
   SHELL
 end
