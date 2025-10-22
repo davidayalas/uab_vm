@@ -1,0 +1,91 @@
+{
+  "name": "Informació Borsa - API Yahoo Finance",
+  "nodes": [
+    {
+      "parameters": {
+        "interval": 60
+      },
+      "name": "Programador",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "id": "trigger-001"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://query1.finance.yahoo.com/v8/finance/chart/AAPL",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "name": "Obtenir Dades Borsa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 300],
+      "id": "http-001"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $json;\n\ntry {\n  const result = response.chart.result[0];\n  const meta = result.meta;\n  \n  const currentPrice = meta.regularMarketPrice;\n  const previousClose = meta.previousClose;\n  const change = currentPrice - previousClose;\n  const changePercent = ((change / previousClose) * 100).toFixed(2);\n  const volume = meta.regularMarketVolume;\n  \n  return {\n    json: {\n      symbol: meta.symbol,\n      price: currentPrice.toFixed(2),\n      change: change.toFixed(2),\n      changePercent: changePercent + '%',\n      volume: volume.toLocaleString('es-ES'),\n      currency: meta.currency,\n      marketState: meta.marketState,\n      timestamp: new Date(meta.regularMarketTime * 1000).toLocaleString('es-ES'),\n      dayHigh: meta.regularMarketDayHigh?.toFixed(2) || 'N/A',\n      dayLow: meta.regularMarketDayLow?.toFixed(2) || 'N/A'\n    }\n  };\n} catch (error) {\n  return {\n    json: {\n      error: 'Error: ' + error.message\n    }\n  };\n}"
+      },
+      "name": "Processar Dades",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300],
+      "id": "code-001"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json;\n\nconst message = `📊 ${data.symbol} - ${data.marketState}\n\n💰 Preu: ${data.price} ${data.currency}\n📈 Canvi: ${data.change} (${data.changePercent})\n📊 Màxim: ${data.dayHigh}\n📉 Mínim: ${data.dayLow}\n📦 Volum: ${data.volume}\n🕐 ${data.timestamp}`;\n\nreturn {\n  json: {\n    ...data,\n    formattedMessage: message\n  }\n};"
+      },
+      "name": "Formatar Sortida",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300],
+      "id": "code-002"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Obtenir Dades Borsa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtenir Dades Borsa": {
+      "main": [
+        [
+          {
+            "node": "Processar Dades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processar Dades": {
+      "main": [
+        [
+          {
+            "node": "Formatar Sortida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {},
+  "tags": []
+}

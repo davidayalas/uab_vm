@@ -43,25 +43,67 @@ Un cop dins, veuràs:
 - **Nodes**: Components que representen accions o serveis
 - **Connections**: Línies que connecten els nodes i defineixen el flux de dades
 
-## 🎯 Demo: Workflow Telegram + Perplexity
+## 🎯 Workflows de Demostració
 
-Aquesta pràctica inclou un workflow de demostració que:
+Aquesta pràctica inclou diversos workflows de demostració que pots importar i utilitzar:
+
+### 1. 📱 Workflow Telegram + Perplexity
+
+**Fitxer**: `~/Desktop/practiques/n8n/demo-wf/weather-telegram-perplexity-api.json`
+
+Aquest workflow demostra com:
 1. Rep missatges d'un bot de Telegram
 2. Envia la consulta a Perplexity AI (API d'intel·ligència artificial)
-3. Retorna la resposta al bot de Telegram
+3. Neteja la resposta eliminant referències numèriques
+4. Retorna la resposta formatada al bot de Telegram
 
-### Importar el workflow de demo
+**Nodes utilitzats**: Telegram Trigger, Perplexity AI, Code (JavaScript), Telegram Send Message
 
-1. A n8n, fes clic a **"Workflows"** al menú superior
+### 2. 📊 Workflow Informació de Borsa (amb JavaScript)
+
+**Fitxer**: `~/Desktop/practiques/n8n/demo-wf/borsa.json`
+
+Aquest workflow obté informació en temps real d'accions de la borsa:
+1. S'executa automàticament cada 60 minuts (Schedule Trigger)
+2. Crida a l'API pública de Yahoo Finance
+3. Processa les dades amb JavaScript per extreure la informació rellevant
+4. Formata el missatge de sortida amb emojis
+
+**Dades obtingudes**: Preu actual, canvi percentual, màxim/mínim del dia, volum, estat del mercat
+
+**Nodes utilitzats**: Schedule Trigger, HTTP Request, Code (JavaScript) x2
+
+### 3. 📈 Workflow Informació de Borsa (sense JavaScript)
+
+**Fitxer**: `~/Desktop/practiques/n8n/demo-wf/borsa-simple.json`
+
+Versió simplificada del workflow anterior que utilitza només nodes natius de n8n:
+1. S'executa automàticament cada 60 minuts
+2. Crida a l'API de Yahoo Finance
+3. Utilitza el node **Set** per extreure i mapejar camps directament
+
+**Avantatges**: Més visual, més fàcil d'editar, sense necessitat de programar
+
+**Nodes utilitzats**: Schedule Trigger, HTTP Request, Set
+
+### Importar un workflow
+
+1. A n8n, fes clic al menú **☰** (dalt a l'esquerra)
 2. Selecciona **"Import from File"**
-3. Tria el fitxer: `demo-workflow-telegram-perplexity-api.json`
+3. Tria el fitxer del workflow que vulguis importar
 4. Fes clic a **"Import"**
 
-El workflow apareixerà amb els nodes ja configurats, però **faltaran les credencials**.
+El workflow apareixerà amb els nodes ja configurats. Alguns workflows necessitaran que configuris credencials (Telegram, APIs, etc.).
 
 ## 🔑 Configurar les credencials
 
-Per fer funcionar el workflow, necessites configurar:
+### Workflows que NO necessiten credencials:
+- ✅ **Informació de Borsa** (borsa.json i borsa-simple.json): Utilitzen l'API pública de Yahoo Finance, funcionen directament
+
+### Workflows que SÍ necessiten credencials:
+- 🔐 **Telegram + Perplexity**: Necessita configurar bot de Telegram i API de Perplexity
+
+Per configurar el workflow de Telegram + Perplexity, necessites:
 
 ### 1. Bot de Telegram
 
@@ -100,18 +142,25 @@ Per fer funcionar el workflow, necessites configurar:
 
 ## 📝 Exercicis proposats
 
-### Exercici 1: Modificar el workflow
+### Exercici 1: Provar els workflows de borsa
+- Importa `borsa.json` i executa'l per veure les dades d'Apple (AAPL)
+- Modifica l'URL per obtenir dades d'altres accions (GOOGL, TSLA, TEF.MC per Telefónica)
+- Compara les dues versions (amb i sense JavaScript)
+
+### Exercici 2: Connectar workflows
+- Afegeix un node de Telegram al workflow de borsa per rebre notificacions
+- Crea un workflow que enviï les dades de borsa a un Google Sheet
+- Afegeix un node d'email per rebre alertes quan el preu canviï més d'un X%
+
+### Exercici 3: Modificar el workflow de Telegram
 - Canvia el prompt enviat a Perplexity per afegir context o instruccions específiques
-- Modifica el format de la resposta que retorna el bot
+- Afegeix un node de condició que respongui diferent segons paraules clau
+- Guarda l'historial de converses en un fitxer JSON
 
-### Exercici 2: Afegir nodes
-- Afegeix un node que guardi les consultes en un fitxer o base de dades
-- Afegeix un node de condició que respongui de forma diferent segons el tipus de pregunta
-
-### Exercici 3: Crear el teu propi workflow
-- Crea un nou workflow des de zero
-- Connecta altres serveis (Google Sheets, Email, etc.)
-- Experimenta amb diferents nodes i connectors
+### Exercici 4: Crear el teu propi workflow
+- Crea un workflow que combini múltiples APIs
+- Experimenta amb nodes de transformació de dades
+- Implementa lògica condicional i bucles
 
 ## 🛠️ Comandes útils
 
@@ -132,7 +181,10 @@ Ctrl + C i tornar a executar ./n8n-start.sh
 practiques/n8n/
 ├── README.md                                      # Aquest fitxer
 ├── n8n-start.sh                                   # Script per iniciar n8n
-└── demo-workflow-telegram-perplexity-api.json     # Workflow de demostració
+└── demo-wf/                                       # Carpeta amb workflows de demostració
+    ├── weather-telegram-perplexity-api.json       # Workflow Telegram + Perplexity
+    ├── borsa.json                                 # Workflow de borsa amb JavaScript
+    └── borsa-simple.json                          # Workflow de borsa sense JavaScript
 ```
 
 ## 🐛 Solució de problemes
@@ -153,10 +205,19 @@ practiques/n8n/
 
 ## 📚 Recursos
 
+### Documentació general
 - **Documentació oficial de n8n**: https://docs.n8n.io/
 - **Comunitat n8n**: https://community.n8n.io/
+- **Llista de nodes disponibles**: https://n8n.io/integrations/
+
+### APIs utilitzades
 - **Documentació de Telegram Bot API**: https://core.telegram.org/bots/api
 - **Perplexity API Docs**: https://docs.perplexity.ai/
+- **Yahoo Finance API**: https://query1.finance.yahoo.com/
+- **Símbols d'accions**: https://finance.yahoo.com/
+
+### Guies específiques
+- **README-BOLSA.md**: Guia completa del workflow de borsa amb exemples i personalitzacions
 
 ## 💡 Consells
 
@@ -167,4 +228,4 @@ practiques/n8n/
 
 ---
 
-**Bon aprenentatge amb n8n!** 🚀
+**Bona automatització!**

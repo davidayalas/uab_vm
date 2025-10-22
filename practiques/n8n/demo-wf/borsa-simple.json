@@ -1,0 +1,142 @@
+{
+  "name": "Informació Borsa - Sense JavaScript",
+  "nodes": [
+    {
+      "parameters": {
+        "interval": 60
+      },
+      "name": "Programador",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "id": "trigger-001"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://query1.finance.yahoo.com/v8/finance/chart/AAPL",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "name": "Obtenir Dades Borsa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 300],
+      "id": "http-001"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "symbol",
+              "value": "={{ $json.chart.result[0].meta.symbol }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "price",
+              "value": "={{ $json.chart.result[0].meta.regularMarketPrice }}",
+              "type": "number"
+            },
+            {
+              "id": "3",
+              "name": "previousClose",
+              "value": "={{ $json.chart.result[0].meta.previousClose }}",
+              "type": "number"
+            },
+            {
+              "id": "4",
+              "name": "change",
+              "value": "={{ $json.chart.result[0].meta.regularMarketPrice - $json.chart.result[0].meta.previousClose }}",
+              "type": "number"
+            },
+            {
+              "id": "5",
+              "name": "changePercent",
+              "value": "={{ (($json.chart.result[0].meta.regularMarketPrice - $json.chart.result[0].meta.previousClose) / $json.chart.result[0].meta.previousClose * 100).toFixed(2) + '%' }}",
+              "type": "string"
+            },
+            {
+              "id": "6",
+              "name": "volume",
+              "value": "={{ $json.chart.result[0].meta.regularMarketVolume }}",
+              "type": "number"
+            },
+            {
+              "id": "7",
+              "name": "currency",
+              "value": "={{ $json.chart.result[0].meta.currency }}",
+              "type": "string"
+            },
+            {
+              "id": "8",
+              "name": "marketState",
+              "value": "={{ $json.chart.result[0].meta.marketState }}",
+              "type": "string"
+            },
+            {
+              "id": "9",
+              "name": "dayHigh",
+              "value": "={{ $json.chart.result[0].meta.regularMarketDayHigh }}",
+              "type": "number"
+            },
+            {
+              "id": "10",
+              "name": "dayLow",
+              "value": "={{ $json.chart.result[0].meta.regularMarketDayLow }}",
+              "type": "number"
+            },
+            {
+              "id": "11",
+              "name": "timestamp",
+              "value": "={{ $json.chart.result[0].meta.regularMarketTime }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Extreure Camps",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [650, 300],
+      "id": "set-001"
+    }
+  ],
+  "connections": {
+    "Programador": {
+      "main": [
+        [
+          {
+            "node": "Obtenir Dades Borsa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtenir Dades Borsa": {
+      "main": [
+        [
+          {
+            "node": "Extreure Camps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {},
+  "tags": []
+}
